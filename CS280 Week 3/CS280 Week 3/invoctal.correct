@@ -1,0 +1,9 @@
+Incorrect Octal Literal 0101%1 at Line: 5
+Incorrect Decimal Literal 25.35 at Line: 6
+Incorrect Octal Literal 02583 at Line: 6
+Total Number of Lines: 8
+Number of Words: 27
+Number of Decimal Literals: 7
+Number of Hexadecimal Literals: 1
+Number of Octal Literals: 1
+Number of Binary Literals: 0

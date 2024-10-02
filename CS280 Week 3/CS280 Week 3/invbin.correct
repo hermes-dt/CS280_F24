@@ -1,0 +1,8 @@
+Incorrect Binary Literal 0b101%1 at Line: 5
+Incorrect Binary Literal 0B2583 at Line: 7
+Total Number of Lines: 8
+Number of Words: 28
+Number of Decimal Literals: 6
+Number of Hexadecimal Literals: 1
+Number of Octal Literals: 1
+Number of Binary Literals: 1

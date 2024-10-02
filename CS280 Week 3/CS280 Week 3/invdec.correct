@@ -1,0 +1,10 @@
+Incorrect Decimal Literal 10.25 at Line: 1
+Incorrect Decimal Literal 4f5 at Line: 3
+Incorrect Decimal Literal 125.75 at Line: 5
+Incorrect Decimal Literal 54+321 at Line: 5
+Total Number of Lines: 8
+Number of Words: 17
+Number of Decimal Literals: 4
+Number of Hexadecimal Literals: 2
+Number of Octal Literals: 3
+Number of Binary Literals: 2
