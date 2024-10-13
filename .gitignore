@@ -16,3 +16,7 @@ CS280 Week 1/.vs/RA 1 Submission/v17/.suo
 CS280 Week 2/.vs/RA2_LateTest/v17/.suo
 CS280 Week 3/.vs/CS280 Week 3/v17/.suo
 CS280 Week 4/.vs/CS280 Week 4/v17/.suo
+*.opendb
+*.db-shm
+*.pdf
+*.vcxproj
