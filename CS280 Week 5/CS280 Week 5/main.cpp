@@ -1,6 +1,9 @@
 //=======================================================
-// Name : Lex.cpp
-// Description : Made by Hermy Taveras
+// Name : main.cpp
+// Description : A program to test my lexical analyzer
+// named "lex.cpp". Outputs a summary of the code 
+// analyzed from the inputed file depending what flags
+// are found in the command-line. Made by Hermy Taveras
 //=======================================================
 #include <iostream>
 #include <fstream>
@@ -9,8 +12,6 @@
 #include "lex.h"
 #include <cstring>
 #include <algorithm>
-
-
 
 int main(int argc, char* argv[]) {
 
@@ -25,13 +26,13 @@ int main(int argc, char* argv[]) {
     set<double> numerics;
     map<Token, set<string>> keywords;
 
-
+    
     ifstream infile(argv[1]);
     if (!infile) {
         cout << "CANNOT OPEN THE FILE " << argv[1] << "\n";
         return 1;
     }
-    if (argc > 2) {
+    if (argc > 2) { //Handles the procesing of any flags written on the command-line
         for (int i = 2; i < argc; i++) {
             if (argv[i][0] == '-') {
                 if (strcmp(argv[i], "-all") == 0) {
@@ -55,18 +56,18 @@ int main(int argc, char* argv[]) {
                 else if (strcmp(argv[i], "-kw") == 0) {
                     flagKw = true;
                 }
-                else {
+                else { 
                     cout << "Unrecognized flag {" << argv[i] << "}\n";
                     return 1;
                 }
-            }
+            } //Reads flags that might be missing a "-"
             else if (strcmp(argv[i], "num") == 0) { flagNum = true; }
             else if (strcmp(argv[i], "id") == 0) { flagId = true; }
             else if (strcmp(argv[i], "bool") == 0) { flagBool = true; }
             else if (strcmp(argv[i], "char") == 0) { flagChar = true; }
             else if (strcmp(argv[i], "kw") == 0) { flagKw = true; }
             else if (strcmp(argv[i], "str") == 0) { flagStr = true; }
-            else {
+            else { //Error messege if more then one file name is included
                 cout << "Only one file name is allowed.\n";
                 return 1;
             }
@@ -74,7 +75,8 @@ int main(int argc, char* argv[]) {
     }
 
     LexItem token;
-
+    //Uses the getNextToken function to process the file and track tokens and lexemes for the summary
+    //Also Handles the output of the "-all" flag output and any errors found during the Lexical analysis
     while ((token = getNextToken(infile, linenum)).GetToken() != DONE) {
         if (flagAll) {
             cout << token << endl;
@@ -114,7 +116,6 @@ int main(int argc, char* argv[]) {
         case AND: case OR: case NOT: case COMMA: case SEMICOL:
         case LPAREN: case RPAREN: case LBRACE: case RBRACE: case DOT:
             tokCount++;
-            // No need to count these separately for now, but included to avoid warnings.
             break;
         case ERR:
             return 1;  // Stop on error
@@ -129,11 +130,12 @@ int main(int argc, char* argv[]) {
         cout << "Empty file." << endl;
         return 0;
     }
-    linenum--;
+    linenum--; //getNextToken starts at line 1, this remove the extra 1 for the line count at the end
 
     IorK = identifiers.size() + keywords.size();
     numCount = numerics.size();
 
+    //Summary of counted Tokens and different lexemes
     cout << "\nLines: " << linenum << endl;
     cout << "Total Tokens: " << tokCount << endl;
     cout << "Identifiers and Keywords: " << IorK << endl;
@@ -141,6 +143,7 @@ int main(int argc, char* argv[]) {
     cout << "Booleans: " << boolCount << endl;
     cout << "Strings and Characters: " << SorC << endl;
 
+    //Handles the different flag outputs in the order expected.
     if (flagNum && !numerics.empty()) {
         cout << "NUMERIC CONSTANTS:\n";
         bool first = true;
@@ -203,6 +206,6 @@ int main(int argc, char* argv[]) {
             
         }
         cout << "\n";
-        return 0;
+        return 0; //Lexical Analyzer done
     }
 }
