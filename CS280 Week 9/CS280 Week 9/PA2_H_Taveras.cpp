@@ -220,6 +220,7 @@ bool AddExpr(istream& in, int& line) {
 	while (true) {
 		tok = Parser::GetNextToken(in, line);
 		if (tok == PLUS || tok == MINUS) {
+			tok = Parser::GetNextToken(in, line);
 			//cout << "before calling 2nd MultExpr" << endl;
 			status = MultExpr(in, line);
 			if (!status) {
@@ -251,6 +252,7 @@ bool MultExpr(istream& in, int& line) {
 	while (true) {
 		tok = Parser::GetNextToken(in, line);
 		if (tok == MULT || tok == DIV || tok == REM) {
+			tok = Parser::GetNextToken(in, line);
 			status = UnaryExpr(in, line);
 			if (!status) {
 				ParseError(line, "Missing expression after '*', '/', '%'");
