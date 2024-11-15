@@ -1,0 +1,3 @@
+case 2: There are more opening brackets than closing ones for one or more bracket types in the input string.
+
+The following sentence does not contain balanced brackets: abc{de[fg(h)i]

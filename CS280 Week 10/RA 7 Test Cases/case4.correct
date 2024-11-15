@@ -1,0 +1,3 @@
+case 4: There are more closing brackets than opening ones for one or more bracket types in the input string.
+
+The following sentence does not contain balanced brackets: abc{de(f[g])}}
