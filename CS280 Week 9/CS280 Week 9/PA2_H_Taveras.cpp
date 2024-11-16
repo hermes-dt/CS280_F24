@@ -3,6 +3,11 @@
  * Programming Assignment 2
  * Fall 2024
 */
+//-----------------------------------------------
+//Filename: PA_H_Taveras.cpp
+//Author: Hermy Taveras
+//Description:
+//-----------------------------------------------
 
 #include "parser.h"
 #include <vector>
@@ -52,10 +57,9 @@ void ParseError(int line, string msg)
 
 //PrintStmt:= PRINT (ExprList) 
 bool PrintStmt(istream& in, int& line) {
-	LexItem t;
+	LexItem t = Parser::GetNextToken(in, line);
 	//cout << "in PrintStmt" << endl;
 
-	t = Parser::GetNextToken(in, line);
 	if (t != LPAREN) {
 
 		ParseError(line, "Missing Left Parenthesis");
@@ -75,7 +79,6 @@ bool PrintStmt(istream& in, int& line) {
 		ParseError(line, "Missing Right Parenthesis");
 		return false;
 	}
-	//Evaluate: print out the list of expressions values
 
 	return true;
 }//End of PrintStmt
@@ -145,7 +148,7 @@ bool LogANDExpr(istream& in, int& line) {
 		return false;
 	}
 
-	LexItem tok = Parser::GetNextToken(in, line);
+	LexItem tok;
 
 	while (true) {
 		tok = Parser::GetNextToken(in, line);
@@ -164,11 +167,10 @@ bool LogANDExpr(istream& in, int& line) {
 	return true;
 }
 
- // EqualExpr::= RelExpr[(==|!=)RelExpr]
+// EqualExpr::= RelExpr[(==|!=)RelExpr]
 bool EqualExpr(istream& in, int& line) {
-	bool status = false;
+	bool status = RelExpr(in, line);
 	//cout << "in EqualExpr and before calling RelExpr" << endl;
-	status = RelExpr(in, line);
 
 	LexItem tok = Parser::GetNextToken(in, line);
 
@@ -177,19 +179,30 @@ bool EqualExpr(istream& in, int& line) {
 		status = RelExpr(in, line);
 		if (!status) {
 			ParseError(line, "Missing expression after equals ");
+			return false;
 		}
-		//cout << "after calling RelExpr" << endl;
+
 		tok = Parser::GetNextToken(in, line);
+		if (tok == EQ || tok == NEQ) {
+			ParseError(line, "Illegal Equality Expression");
+			return false;
+		}
+		Parser::PushBackToken(tok);
 	}
-	Parser::PushBackToken(tok);
+	else {
+		Parser::PushBackToken(tok);
+
+	}
 	return status;
 }
 
 // RelExpr::= AddExpr[(<|>)AddExpr]
 bool RelExpr(istream& in, int& line) {
-	bool status = false;
+	bool status = AddExpr(in, line);
 	//cout << "in RelExpr and before calling calling AddExpr" << endl;
-	status = AddExpr(in, line);
+	if (!status) {
+		return false;
+	}
 
 	LexItem tok = Parser::GetNextToken(in, line);
 
@@ -198,11 +211,20 @@ bool RelExpr(istream& in, int& line) {
 		status = AddExpr(in, line);
 		if (!status) {
 			ParseError(line, "Missing expression after '>' or '<'");
+			return false;
 		}
 		//cout << "after calling AddExpr" << endl;
+
 		tok = Parser::GetNextToken(in, line);
+		if (tok == GTHAN || tok == LTHAN) { //Preventing cascading here -.-
+			ParseError(line, "Illegal relational operator");
+			return false;
+		}
+		Parser::PushBackToken(tok);
 	}
-	Parser::PushBackToken(tok);
+	else {
+		Parser::PushBackToken(tok);
+	}
 	return status;
 }
 // AddExpr::= MultExpr{(+|-)MultExpr}
@@ -215,12 +237,11 @@ bool AddExpr(istream& in, int& line) {
 		return false;
 	}
 
-	LexItem tok = Parser::GetNextToken(in, line);
+	LexItem tok;
 
 	while (true) {
 		tok = Parser::GetNextToken(in, line);
 		if (tok == PLUS || tok == MINUS) {
-			tok = Parser::GetNextToken(in, line);
 			//cout << "before calling 2nd MultExpr" << endl;
 			status = MultExpr(in, line);
 			if (!status) {
@@ -252,14 +273,14 @@ bool MultExpr(istream& in, int& line) {
 	while (true) {
 		tok = Parser::GetNextToken(in, line);
 		if (tok == MULT || tok == DIV || tok == REM) {
-			tok = Parser::GetNextToken(in, line);
 			status = UnaryExpr(in, line);
 			if (!status) {
-				ParseError(line, "Missing expression after '*', '/', '%'");
+				ParseError(line, "Missing operand after operator");
 				return false;
 			}
 		}
 		else {
+
 			Parser::PushBackToken(tok);
 			break;
 		}
@@ -298,7 +319,7 @@ bool PrimaryExpr(istream& in, int& line, int sign) {
 	if (tok == IDENT) {
 		// Validate if the identifier is defined (from defVar map, for example)
 		if (SymTable.find(tok.GetLexeme()) == SymTable.end()) {
-			ParseError(line, "Using undefined variable: " + tok.GetLexeme());
+			ParseError(line, "Undeclared Variable");
 			return false;
 		}
 	}
@@ -310,19 +331,21 @@ bool PrimaryExpr(istream& in, int& line, int sign) {
 	if (tok == LPAREN) {
 		//cout << "after LPAREN before calling Expr" << endl;
 		if (!Expr(in, line)) {
-			ParseError(line, "Missing expression after left Parenthensis");
+			ParseError(line, "Missing expression after Left Parenthesis");
 			return false;
 		}
 		//cout << "before RPAREN after calling Expr" << endl;
 		tok = Parser::GetNextToken(in, line);
 		if (tok != RPAREN) {
 			ParseError(line, "Missing right Parenthesis after expression");
+			Parser::PushBackToken(tok);
 			return false;
 		}
 		return true;
 
 	}
-	ParseError(line, "Unrecognized primary expression");
+	Parser::PushBackToken(tok);
+	//ParseError(line, "Unrecognized primary expression");
 	return false;
 }
 
@@ -331,22 +354,23 @@ bool Prog(istream& in, int& line) {
 	LexItem tok = Parser::GetNextToken(in, line);
 
 	if (tok != PROGRAM) {
-		ParseError(line, "Missing PROGRAM Keyword");
+		ParseError(line, "Missing Program Keyword");
 		return false;
 	}
 
 	tok = Parser::GetNextToken(in, line);
 	if (tok != IDENT) {
-		ParseError(line, "Missing Program Identifier");
+		ParseError(line, "Missing Program name");
 		return false;
 	}
 	// Parse the compound statement
 	if (!CompStmt(in, line)) {
-		ParseError(line, "Invalid Program Body");
+		ParseError(line, "Invalid Program");
 		return false;
 	}
-
+	cout << "(DONE)" << endl;
 	return true;
+
 }
 
 //CompStmt::= '{' StmtList '}'
@@ -354,18 +378,18 @@ bool CompStmt(istream& in, int& line) {
 	LexItem tok = Parser::GetNextToken(in, line);
 
 	if (tok != LBRACE) {  // Assuming LBRACE represents '{'
-		ParseError(line, "Missing '{' at the beginning of compound statement");
+		//ParseError(line, "Missing '{' at the beginning of compound statement");
 		return false;
 	}
 
 	if (!StmtList(in, line)) {
-		ParseError(line, "Invalid statement list in compound statement");
+		ParseError(line, "Incorrect statement list");
 		return false;
 	}
 
 	tok = Parser::GetNextToken(in, line);
 	if (tok != RBRACE) {  // Assuming RBRACE represents '}'
-		ParseError(line, "Missing '}' at the end of compound statement");
+		//ParseError(line, "Missing '}' at the end of compound statement");
 		return false;
 	}
 
@@ -375,19 +399,17 @@ bool CompStmt(istream& in, int& line) {
 //StmtList::= Stmt{Stmt}
 bool StmtList(istream& in, int& line) {
 	while (true) {
-		if (!Stmt(in, line)) {
-
-			LexItem tok = Parser::GetNextToken(in, line);
-			Parser::PushBackToken(tok);
-			if (tok == RBRACE || tok == DONE) {
-
-				return true;
-			}
-			else {
-				ParseError(line, "Invalid statement in statement list");
-				return false;
-			}
-		}
+ if (!Stmt(in, line)) {
+            LexItem tok = Parser::GetNextToken(in, line);
+            if (tok == RBRACE || tok == DONE) {
+                Parser::PushBackToken(tok);
+                return true;
+          
+            } else {
+                ParseError(tok.GetLinenum(), "Syntactic error in statement list.");
+                return false;
+            }
+        }
 
 	}
 
@@ -396,16 +418,41 @@ bool StmtList(istream& in, int& line) {
 
 //Stmt::= DeclStmt | Control Stmt | CompStmt
 bool Stmt(istream& in, int& line) {
-	bool status = false;
+	LexItem tok = Parser::GetNextToken(in, line);
+	Parser::PushBackToken(tok);
 
-	status = (DeclStmt(in, line) || ControlStmt(in, line) || CompStmt(in, line));
-	return status;
+
+	if (tok == INT || tok == FLOAT || tok == BOOL || tok == CHAR || tok == STRING) {
+		if (!DeclStmt(in, line)) {
+			return false;  
+		}
+		return true;
+	}
+
+	if (tok == IDENT || tok == IF || tok == PRINT) {
+		if (!ControlStmt(in, line)) {
+			ParseError(line, "Invalid control statement");
+			return false;
+		}
+		return true;
+	}
+
+	if (tok == LBRACE) {
+		if (!CompStmt(in, line)) {
+			ParseError(line, "Invalid compound statement");
+			return false;
+		}
+		return true;
+	}
+
+	
+	return false;
+
 }
 
 //DeclStmt::= (INT | FLOAT | BOOL | CHAR | STRING)VarList;
 bool DeclStmt(istream& in, int& line) {
-	LexItem tok;
-	tok = Parser::GetNextToken(in, line);
+	LexItem tok = Parser::GetNextToken(in, line);
 
 	if (tok == INT || tok == FLOAT || tok == BOOL || tok == CHAR || tok == STRING) {
 		Token vType = tok.GetToken();
@@ -414,7 +461,8 @@ bool DeclStmt(istream& in, int& line) {
 		//cout << "before calling VarList" << endl;
 
 		if (!VarList(in, line)) {
-			ParseError(line, "Invalid variable list in declaration");
+			ParseError(line, "Incorrect variable in Declaration Statement.");
+			ParseError(line, "Invalid declaration statement.");
 			declStmtOn = false;
 			return false;
 		}
@@ -428,55 +476,27 @@ bool DeclStmt(istream& in, int& line) {
 		}
 
 		//cout << "after semi colon" << endl;
-		
+
 		for (const std::string& varName : varNames) {
-			defVar[varName] = false;
 			SymTable[varName] = vType;
 		}
-		varNames.clear(); // Clear the container after processing
 		return true;
-		
+
 	}
-	else {
-		Parser::PushBackToken(tok);
-		return false;
-	}
+	Parser::PushBackToken(tok);
+	return false;
 }
 
 //VarList::= Var [=Expr] {,Var[=Expr]};
 bool VarList(istream& in, int& line) {
 	varNames.clear();
-	bool status = false;
-	status = Var(in, line);
-	if (!status) {
-		ParseError(line, "Invalid variable in variable list");
-		return status;
-	}
-
-	LexItem tok = Parser::GetNextToken(in, line);
-
-	if (tok == ASSOP) {
-		if (!Expr(in, line)) {
-			ParseError(line, "Invalid initialization expression");
-			return false;
-		}
-		std::cout << "Initialization of the variable " << varNames.back()
-			<< " in the declaration statement at line " << line << std::endl;
-
-		defVar[varNames.back()] = true;
-
-		tok = Parser::GetNextToken(in, line);
-	}
-
-
-	while(tok == COMMA) {
-
+	do {
 		if (!Var(in, line)) {
-			ParseError(line, "Invalid variable in variable list");
+			//ParseError(line, "Invalid variable in variable list");
 			return false;
 		}
 
-		tok = Parser::GetNextToken(in, line);
+		LexItem tok = Parser::GetNextToken(in, line);
 
 		if (tok == ASSOP) {
 			if (!Expr(in, line)) {
@@ -490,14 +510,16 @@ bool VarList(istream& in, int& line) {
 
 			tok = Parser::GetNextToken(in, line);
 		}
-		else {
-			// No initialization; variable remains uninitialized
-			defVar[varNames.back()] = false;
-		}
-	}
-	Parser::PushBackToken(tok);
-	return true;
+		else defVar[varNames.back()] = false;
 
+
+		if (tok != COMMA) {
+			Parser::PushBackToken(tok);
+			break;
+		}
+	} while (true);
+
+	return true;
 }
 
 //Var::= IDENT;
@@ -505,72 +527,89 @@ bool Var(istream& in, int& line) {
 	LexItem tok = Parser::GetNextToken(in, line);
 	if (tok == IDENT) {
 		string varName = tok.GetLexeme();
-			if (declStmtOn) { //For declaration statements
-				if (SymTable.find(varName) != SymTable.end()) {
-					ParseError(line, "Variable '" + varName + "' already declared");
-					return false;
-				}
-				varNames.push_back(varName);
+		if (declStmtOn) { //For declaration statements
+			if (SymTable.find(varName) != SymTable.end()) {
+				ParseError(line, "Variable Redefinition");
+				return false;
 			}
-			else { //For Undefined variables
-				if (SymTable.find(varName) == SymTable.end()) {
-					ParseError(line, "Uainf unswdinws variable: '" + varName);
-					return false;
-				}
-			}
-			return true;
+			varNames.push_back(varName);
 		}
-	else {
-		ParseError(line, "Expected an identifier for variable");
-		return false;
+		else { //For Undefined variables
+			if (SymTable.find(varName) == SymTable.end()) {
+				ParseError(line, "Undeclared Variable");
+				return false;
+			}
+		}
+		return true;
 	}
+	return false;
 }
 
 //ControlStmt::= AssgnStmt; | IfStmt | PrintStmt;
 bool ControlStmt(istream& in, int& line) {
-	if (AssignStmt(in, line)) {
-		 LexItem tok = Parser::GetNextToken(in, line);
-		if (tok != SEMICOL) {
-			Parser::PushBackToken(tok);
+	int saveLine = line;
+	LexItem tok = Parser::GetNextToken(in, line);
+	Parser::PushBackToken(tok);
+
+	if (tok == IDENT) {
+		if (!AssignStmt(in, line)) {
+			ParseError(line, "Incorrect Assignment Statement");
 			return false;
 		}
-		else return true;
-	}
-	else if (IfStmt(in, line)) {
+		tok = Parser::GetNextToken(in, line);
+		if (tok != SEMICOL) {
+			ParseError(saveLine, "Missing semicolon at end of statement.");
+			return false;
+		}
 		return true;
 	}
-	else if (PrintStmt(in, line)) {
-		LexItem tok = Parser::GetNextToken(in, line);
-		if (tok != SEMICOL) {
-			Parser::PushBackToken(tok);
+	else if (tok == IF) {
+		if(!IfStmt(in, line)){
+			ParseError(line, "Missing if statement condition");
 			return false;
 		}
-		else return true;
+		return true;
 	}
-	else {
-		return false;
+	else if (tok == PRINT) {
+		tok = Parser::GetNextToken(in, line);
+		if (!PrintStmt(in, line)) {
+			ParseError(line, "Incorrect Print Statement");
+			return false;
+		}
+		tok = Parser::GetNextToken(in, line);
+		if (tok != SEMICOL) {
+			ParseError(saveLine, "Missing semicolon at end of statement.");
+			return false;
+		}
+		return true;
 	}
+
+	ParseError(line, "Invalid control statement");
+	return false;
 }
 //AssignStmt::= Var ( = | += | *= | /= | %=) Expr
 bool AssignStmt(istream& in, int& line) {
-	LexItem tok = Parser::GetNextToken(in, line);
-	string varName;
+	LexItem tok; //= Parser::GetNextToken(in, line);
+	//string varName;
 
 	if (!Var(in, line)) {
-		Parser::PushBackToken(tok);
+		ParseError(line, "Missing Left - Hand Side Variable in Assignment statement");
 		return false;
 	}
 
 	tok = Parser::GetNextToken(in, line);
 	if (!(tok == ASSOP || tok == ADDASSOP || tok == MULASSOP || tok == DIVASSOP || tok == REMASSOP)) {
+		ParseError(line, "Missing Assignment Operator");
+		Parser::PushBackToken(tok);
 		return false;
 	}
 
 	if (!Expr(in, line)) {
+		ParseError(line, "Missing expression in Assignment Statement");
 		return false;
 	}
 
-	defVar[varName] = true;
+	//defVar[varName] = true;
 	return true;
 }
 //IfStmt::= IF (Expr) Stmt [ELSE Stmt]
@@ -585,16 +624,19 @@ bool IfStmt(istream& in, int& line) {
 	tok = Parser::GetNextToken(in, line);
 
 	if (tok != LPAREN) {
+		ParseError(line, "Missing left parenthesis in IF statement");
 		return false;
 	}
 
 	if (!Expr(in, line)) {
+		ParseError(line, "Incorrect IF Statement");
 		return false;
 	}
 
 	tok = Parser::GetNextToken(in, line);
 
 	if (tok != RPAREN) {
+		ParseError(line, "Missing right parenthesis in IF statement");
 		return false;
 	}
 
@@ -602,10 +644,9 @@ bool IfStmt(istream& in, int& line) {
 
 	cout << "in IfStmt then-clause at nesting level: " << nesting_level << endl;
 
-	tok = Parser::GetNextToken(in, line);
-
 	if (!Stmt(in, line)) {
 		nesting_level--;
+		ParseError(line, "Incorrect IF Statement");
 		return false;
 	}
 
@@ -613,8 +654,8 @@ bool IfStmt(istream& in, int& line) {
 
 	if (tok == ELSE) {
 		cout << "in IfStmt else-clause at nesting level: " << nesting_level << endl;
-		tok = Parser::GetNextToken(in, line);
 		if (!Stmt(in, line)) {
+			nesting_level--;
 			return false;
 		}
 	}
